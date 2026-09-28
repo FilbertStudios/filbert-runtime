@@ -39,3 +39,18 @@ test('the marker survives into the built output as an unbroken literal', () => {
 test('PROTOCOL is a positive integer', () => {
   assert.ok(Number.isInteger(PROTOCOL) && PROTOCOL > 0);
 });
+
+test('the marker survives the browser bundle, minified', () => {
+  /*
+   * The tsc output keeping the literal proves nothing about the file a game
+   * actually ships. Defold and friends load the bundled, minified build, and
+   * that is what the platform's upload scan reads — so this is the check that
+   * matters, and the one that would have caught a minifier learning to fold
+   * string constants.
+   */
+  const bundle = readFileSync(new URL('../dist/filbert.browser.js', import.meta.url), 'utf8');
+  assert.ok(bundle.includes(`filbert-runtime@${SDK_VERSION}`),
+    'the bundled build must still carry the literal the scan looks for');
+  const found = /filbert-runtime@(\d+\.\d+\.\d+)/.exec(bundle);
+  assert.equal(found[1], SDK_VERSION);
+});

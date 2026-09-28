@@ -1,6 +1,6 @@
 {
   "name": "@filbert/runtime",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Filbert game client — session, ad and progress reporting for web games",
   "type": "module",
@@ -19,7 +19,8 @@
       "types": "./dist/defold.d.ts",
       "default": "./dist/defold.js"
     },
-    "./defold/filbert.lua": "./defold/filbert.lua"
+    "./defold/filbert.lua": "./defold/filbert.lua",
+    "./browser": "./dist/filbert.browser.js"
   },
   "files": [
     "dist",
@@ -30,11 +31,13 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "prepare": "tsc -p tsconfig.json",
+    "prepare": "tsc -p tsconfig.json && npm run bundle",
     "test": "node --test",
-    "check": "tsc -p tsconfig.json --noEmit"
+    "check": "tsc -p tsconfig.json --noEmit",
+    "bundle": "esbuild src/browser.ts --bundle --format=iife --global-name=globalThis.Filbert --outfile=dist/filbert.browser.js --target=es2020 --minify"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "typescript": "^5.6.0"
   },
   "sideEffects": false

@@ -158,7 +158,23 @@ Defold не дає об'єкта гри, який можна передати в
 сторінці лежить місток, а Lua кличе його через `html5.run` — єдиний канал, який
 у Lua до сторінки є.
 
-**На сторінці** (у шаблоні збірки, поряд із `dmloader.js`):
+**На сторінці.** Defold не має бандлера — є згенерований `index.html` і тека
+файлів поруч. Тому в пакеті є **один зібраний файл**: покладіть
+`dist/filbert.browser.js` поруч із `index.html` і додайте в шаблон:
+
+```html
+<script src="filbert.browser.js"></script>
+<script>
+  var fg = Filbert.start({ game: "car-eats-car-2-deluxe", build: "0.28" });
+  Filbert.attachDefold(fg);
+</script>
+```
+
+Скрипт визначає `window.Filbert` із `start`, `attachDefold`, `attachPhaser` і
+константами версії. Дебаг-канал сам нічого не відкриває, доки в адресі гри
+немає `?devsdk=1` — тож той самий файл спокійно їде на портал.
+
+Якщо бандлер усе ж є:
 
 ```ts
 import { attachDefold } from "@filbert/runtime/defold";

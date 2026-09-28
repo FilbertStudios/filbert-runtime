@@ -16,10 +16,10 @@
  */
 
 /** Keep in step with package.json. */
-export const SDK_VERSION = '0.2.0';
+export const SDK_VERSION = '0.3.0';
 
 /** Wire-contract version for the dev-panel handshake. Bump on breaking changes. */
 export const PROTOCOL = 1;
 
 /** Written verbatim into every build. Never compose this at runtime. */
-export const SDK_MARKER = 'filbert-runtime@0.2.0';
+export const SDK_MARKER = 'filbert-runtime@0.3.0';
