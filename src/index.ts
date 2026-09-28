@@ -17,6 +17,7 @@ import { installId, randomId } from './ids.js';
 import { detectPlatform } from './platform.js';
 import { Queue } from './queue.js';
 import { beacon, send, urlFor } from './transport.js';
+import { SDK_VERSION, SDK_MARKER, PROTOCOL } from './version.js';
 
 const DEFAULT_GLOBAL = '__fgS';
 const DEFAULT_FLUSH_MS = 12_000;
@@ -245,7 +246,9 @@ function build(config: Config): Client {
       } catch { /* ignore */ }
     }),
 
-    debug: () => ({ sid, iid, game: config.game, build: buildId, plat, plats, plath, url, seq, queued: queue.length, lost: queue.lost }),
+    // SDK_MARKER is read here so a bundler cannot tree-shake the literal the
+    // platform's upload scan looks for; `sideEffects: false` makes that real.
+    debug: () => ({ sdk: SDK_VERSION, marker: SDK_MARKER, protocol: PROTOCOL, sid, iid, game: config.game, build: buildId, plat, plats, plath, url, seq, queued: queue.length, lost: queue.lost }),
   };
 
   // Named like the ad debug hook the project already has, so there is one place
@@ -261,4 +264,5 @@ function build(config: Config): Client {
 /** Above this many queued events we stop holding a failed batch for retry. */
 const MAX_HELD = 60;
 
+export { SDK_VERSION, SDK_MARKER, PROTOCOL } from './version.js';
 export type { AdEntry, Config, Envelope, Event, LevelAction } from './types.js';
