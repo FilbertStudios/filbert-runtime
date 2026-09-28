@@ -58,6 +58,13 @@ export interface Config {
   flushMs?: number;
   /** Heartbeat interval in ms. Default 15000. */
   heartbeatMs?: number;
+  /**
+   * Name of the global the game polls for commands, e.g. `__cec2d_cmd`.
+   * Set it and the dev panel may drive the game; leave it out and the SDK
+   * never announces `cmd`, so the panel hides those buttons instead of
+   * offering a control that does nothing.
+   */
+  commandGlobal?: string;
   /** Report internal problems. Default: silent. */
   onError?: (where: string, err: unknown) => void;
 }

@@ -19,6 +19,7 @@ import { Queue } from './queue.js';
 import { beacon, send, urlFor } from './transport.js';
 import { SDK_VERSION, SDK_MARKER, PROTOCOL } from './version.js';
 import { createMarks, type Mark } from './marks.js';
+import { createDevLink } from './devlink.js';
 
 const DEFAULT_GLOBAL = '__fgS';
 const DEFAULT_FLUSH_MS = 12_000;
@@ -109,11 +110,25 @@ function build(config: Config): Client {
   const marks = createMarks();
   const round = (v: number | undefined) => (v === undefined ? undefined : Math.round(v * 1000) / 1000);
 
-  /** Record a mark and mirror it to telemetry as a `phase` event. */
+  /*
+   * The dev channel. Silent unless the game's own URL carries `?devsdk=1`, so
+   * the production build ships this code and never opens a listener.
+   */
+  const dev = createDevLink({
+    game: config.game,
+    build: buildId,
+    sdkVersion: SDK_VERSION,
+    snapshot: () => ({ marks: marks.all() }),
+    ...(config.commandGlobal ? { commandGlobal: config.commandGlobal } : {}),
+    ...(config.onError ? { onError: config.onError } : {}),
+  });
+
+  /** Record a mark, mirror it to telemetry, and stream it to the panel. */
   const mark = (name: string) => {
     const m = marks.add(name);
     if (!m) return;
     put('phase', { p: name, ms: round(m.t) });
+    dev.phase(m);
   };
 
   /*
@@ -305,6 +320,7 @@ function build(config: Config): Client {
       stopped = true;
       clearInterval(timer);
       clearInterval(heartbeat);
+      try { dev.stop(); } catch (e) { report('devStop', e); }
       try {
         removeEventListener('visibilitychange', onHide);
         removeEventListener('pagehide', onPageHide);
@@ -313,7 +329,7 @@ function build(config: Config): Client {
 
     // SDK_MARKER is read here so a bundler cannot tree-shake the literal the
     // platform's upload scan looks for; `sideEffects: false` makes that real.
-    debug: () => ({ sdk: SDK_VERSION, marker: SDK_MARKER, protocol: PROTOCOL, sid, iid, game: config.game, build: buildId, plat, plats, plath, url, seq, queued: queue.length, lost: queue.lost }),
+    debug: () => ({ sdk: SDK_VERSION, marker: SDK_MARKER, protocol: PROTOCOL, dev: dev.active, sid, iid, game: config.game, build: buildId, plat, plats, plath, url, seq, queued: queue.length, lost: queue.lost }),
   };
 
   // Named like the ad debug hook the project already has, so there is one place
