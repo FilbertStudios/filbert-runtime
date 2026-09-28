@@ -14,11 +14,17 @@
     "./phaser": {
       "types": "./dist/phaser.d.ts",
       "default": "./dist/phaser.js"
-    }
+    },
+    "./defold": {
+      "types": "./dist/defold.d.ts",
+      "default": "./dist/defold.js"
+    },
+    "./defold/filbert.lua": "./defold/filbert.lua"
   },
   "files": [
     "dist",
     "src",
+    "defold",
     "README.md",
     "INTEGRATION.md"
   ],
