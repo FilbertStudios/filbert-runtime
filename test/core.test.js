@@ -85,7 +85,7 @@ test('the batch goes out as a preflight-free simple request', async () => {
   const post = env.sent.find((s) => s.via === 'fetch');
   assert.ok(post, 'a batch was sent');
   assert.strictEqual(post.headers['Content-Type'], 'text/plain;charset=UTF-8');
-  assert.match(post.url, /\/api\/s\/demo$/, 'path carries no word a blocker list matches');
+  assert.match(post.url, /\/api\/s\/demo$/, 'endpoint path is fixed by the wire contract');
 });
 
 test('the envelope carries game, build and the host the platform came from', async () => {

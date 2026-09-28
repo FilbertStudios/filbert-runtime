@@ -15,8 +15,10 @@ const CONTENT_TYPE = 'text/plain;charset=UTF-8';
 
 export function urlFor(endpoint: string | undefined, game: string): string {
   const base = (endpoint || '').replace(/\/+$/, '');
-  // No word from the blocker lists appears in this path, and that is why it can
-  // never be renamed casually: the path is compiled into every shipped build.
+  // Part of the wire contract, and compiled into every shipped build: a build
+  // already on a portal keeps posting to the path it was built with. Renaming
+  // it silently orphans those builds, so it does not change without a plan.
+  // See the platform's internal notes for the rest of the reasoning.
   return `${base}/api/s/${encodeURIComponent(game)}`;
 }
 
