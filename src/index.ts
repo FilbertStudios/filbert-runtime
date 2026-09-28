@@ -18,12 +18,31 @@ import { detectPlatform } from './platform.js';
 import { Queue } from './queue.js';
 import { beacon, send, urlFor } from './transport.js';
 import { SDK_VERSION, SDK_MARKER, PROTOCOL } from './version.js';
+import { createMarks, type Mark } from './marks.js';
 
 const DEFAULT_GLOBAL = '__fgS';
 const DEFAULT_FLUSH_MS = 12_000;
 const DEFAULT_HEARTBEAT_MS = 15_000;
 
 export interface Client {
+  /*
+   * The lifecycle. `ready`, `loadingFinished` and `gameplayStart` are the three
+   * a portal's gates are defined against, so they are not optional in practice
+   * even though nothing here enforces them. The SDK takes the time; the caller
+   * only says that the thing happened.
+   */
+  /** The engine is up and our code runs. Once per session. */
+  ready(): void;
+  /** The game is interactive — the first screen. Once per session. */
+  loadingFinished(): void;
+  /** Gameplay began. This is the one portals measure traffic against. */
+  gameplayStart(): void;
+  gameplayStop(): void;
+  /** Any other milestone: menu, lobby, level_loaded. Free-form, repeatable. */
+  phase(name: string): void;
+  /** Marks taken so far, in order. Read by the dev channel. */
+  marks(): readonly Mark[];
+
   boot(timings: { ttfr?: number; tload?: number; tplay?: number; bytes?: number; src?: string }): void;
   /** Run just before the session's `end` event is queued. Used by adapters. */
   onBeforeEnd(fn: () => void): void;
@@ -39,7 +58,12 @@ export interface Client {
 /** A client whose every method does nothing, for `enabled: false` and for failure. */
 function inertClient(): Client {
   const noop = () => {};
-  return { boot: noop, onBeforeEnd: noop, ad: noop, level: noop, buy: noop, custom: noop, flush: noop, stop: noop, debug: () => ({ enabled: false }) };
+  return {
+    ready: noop, loadingFinished: noop, gameplayStart: noop, gameplayStop: noop,
+    phase: noop, marks: () => [],
+    boot: noop, onBeforeEnd: noop, ad: noop, level: noop, buy: noop, custom: noop,
+    flush: noop, stop: noop, debug: () => ({ enabled: false }),
+  };
 }
 
 export function start(config: Config): Client {
@@ -81,6 +105,33 @@ function build(config: Config): Client {
   const beforeEnd: Array<() => void> = [];
 
   const at = () => Date.now() - t0;
+
+  const marks = createMarks();
+  const round = (v: number | undefined) => (v === undefined ? undefined : Math.round(v * 1000) / 1000);
+
+  /** Record a mark and mirror it to telemetry as a `phase` event. */
+  const mark = (name: string) => {
+    const m = marks.add(name);
+    if (!m) return;
+    put('phase', { p: name, ms: round(m.t) });
+  };
+
+  /*
+   * `boot` used to be told its timings; now it reads them off the marks.
+   *
+   * An explicit boot() still wins. A game that measured something the SDK
+   * cannot see — bytes on the wire, which engine file the browser chose —
+   * should not have that overwritten by a partial guess assembled here.
+   */
+  const autoBoot = () => {
+    if (sentBoot) return;
+    const ttfr = marks.at('ready');
+    const tload = marks.at('loadingFinished');
+    const tplay = marks.at('gameplayStart');
+    if (ttfr === undefined && tload === undefined && tplay === undefined) return;
+    sentBoot = true;
+    put('boot', { ttfr: round(ttfr), tload: round(tload), tplay: round(tplay), src: 'marks' });
+  };
   const put = (n: string, fields: Record<string, unknown> = {}) => {
     if (stopped) return;
     queue.push({ t: at(), n, ...fields } as Event);
@@ -185,7 +236,21 @@ function build(config: Config): Client {
     });
   } catch { put('env', {}); }
 
+  // A session that ends before gameplay still knows how far it got, and that is
+  // exactly the session worth looking at. Registered before the game's own
+  // handlers so the numbers exist by the time `end` is assembled.
+  beforeEnd.push(() => { try { autoBoot(); } catch (e) { report('autoBoot', e); } });
+
   const client: Client = {
+    ready: guard('ready', () => mark('ready')),
+    loadingFinished: guard('loadingFinished', () => mark('loadingFinished')),
+    // Gameplay is where every gate is measured, so this is the moment the
+    // derived boot numbers are complete and worth sending.
+    gameplayStart: guard('gameplayStart', () => { mark('gameplayStart'); autoBoot(); }),
+    gameplayStop: guard('gameplayStop', () => mark('gameplayStop')),
+    phase: guard('phase', (name: string) => mark(name)),
+    marks: () => marks.all(),
+
     boot: guard('boot', (timings) => {
       if (sentBoot) return; // once per session; a second would be a different number meaning the same thing
       sentBoot = true;
@@ -265,4 +330,5 @@ function build(config: Config): Client {
 const MAX_HELD = 60;
 
 export { SDK_VERSION, SDK_MARKER, PROTOCOL } from './version.js';
+export type { Mark, MarkRecorder } from './marks.js';
 export type { AdEntry, Config, Envelope, Event, LevelAction } from './types.js';
