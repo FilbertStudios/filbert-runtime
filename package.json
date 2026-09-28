@@ -1,0 +1,35 @@
+{
+  "name": "@filbert/runtime",
+  "version": "0.1.1",
+  "private": true,
+  "description": "Filbert game client — session, ad and progress reporting for web games",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./phaser": {
+      "types": "./dist/phaser.d.ts",
+      "default": "./dist/phaser.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "INTEGRATION.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "tsc -p tsconfig.json",
+    "test": "node --test",
+    "check": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  },
+  "sideEffects": false
+}
